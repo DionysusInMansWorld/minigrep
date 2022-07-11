@@ -1,21 +1,25 @@
 use std::{error::Error, fs, env};
 
-pub struct Config<'a> {
-    pub query: &'a str,
-    pub filename: &'a str,
+pub struct Config {
+    pub query: String,
+    pub filename: String,
     pub case_sensitive: bool,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(args: &'a [String]) -> Result<Config<'a>, &str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
-        }
+impl Config {
+    pub fn new(args: env::Args) -> Result<Config, &'static str> {
+        let mut args = args.skip(1);
 
-        let query = &args[1];
-        let filename = &args[2];
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("didn't get a query string"),
+        };
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("didn't get a file name"),
+        };
 
-        let case_sensitive = if let Some(arg) = args.get(3) {
+        let case_sensitive = if let Some(arg) = args.next() {
             match arg.as_str() {
                 "-i" => false,
                 "-s" => true,
@@ -30,12 +34,12 @@ impl<'a> Config<'a> {
 }
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.filename)?;
+    let contents = fs::read_to_string(&config.filename)?;
 
     let result = if config.case_sensitive {
-        search(config.query, &contents)
+        search(&config.query, &contents)
     } else {
-        search_case_insensitive(config.query, &contents)
+        search_case_insensitive(&config.query, &contents)
     };
 
     if result.is_empty() {
